@@ -1,7 +1,7 @@
 <template>
   <div class="sidebar">
     <div class="workspace">
-      <div class="workspace-name">{{ workspaceName }}</div>
+      <div class="workspace-name">{{ workspace.name }}</div>
       <button class="add-channel">+</button>
     </div>
 
@@ -24,7 +24,13 @@
 </template>
 
 <script lang="ts" setup>
-const workspaceName = 'My Workspace'
+import useMainStore from '@/stores'
+import { storeToRefs } from 'pinia'
+
+// init ...
+const main_store = useMainStore()
+
+const { user, workspace } = storeToRefs(main_store)
 
 const channels = [
   { id: 1, name: 'general' },

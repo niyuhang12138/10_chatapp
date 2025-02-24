@@ -4,7 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    redirect: '/login',
+    redirect: '/chat',
   },
   {
     path: '/login',
@@ -20,12 +20,22 @@ const routes: Array<RouteRecordRaw> = [
     path: '/chat',
     name: 'chat',
     component: () => import('@/views/Chat.vue'),
+    meta: {
+      requiresAuth: true,
+    },
   },
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+})
+
+router.beforeEach((to, from) => {
+  const isAuthenticated = !!localStorage.getItem('user')
+  if (to.matched.some((record) => record.meta.requiresAuth) && !isAuthenticated) {
+    return '/login'
+  }
 })
 
 export default router
