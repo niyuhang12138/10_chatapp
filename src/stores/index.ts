@@ -61,22 +61,33 @@ export const useMainStore = defineStore('main_store', () => {
   /**
    * List of channels
    */
-  interface IChannel {
-    id: number
-  }
 
-  const channels = reactive<Array<IChannel>>([])
+  const channels = reactive<Array<Interface.IChannel>>(
+    localStorage.getItem('channels') ? JSON.parse(localStorage.getItem('channels')!) : [],
+  )
 
-  function setChannels(new_channels: Array<IChannel>) {
+  function setChannels(new_channels: Array<Interface.IChannel>) {
     channels.splice(0, channels.length, ...new_channels)
   }
+
+  const get_channels = computed(() =>
+    channels.filter((channel) => channel.type !== Interface.ChannelType.Single),
+  )
+
+  const get_single_channels = computed(() => {
+    return channels.filter((channel) => channel.type === Interface.ChannelType.Single)
+  })
 
   /**
    * Messages hashmap, keyed by channel ID
    */
   type TMessages = Map<number, Array<string>>
 
-  const messages = reactive<TMessages>(new Map())
+  const messages = reactive<TMessages>(
+    new Map(
+      localStorage.getItem('messages') ? JSON.parse(localStorage.getItem('messages')!) : new Map(),
+    ),
+  )
 
   function setMessages(new_messages: TMessages) {
     messages.clear()
@@ -85,7 +96,21 @@ export const useMainStore = defineStore('main_store', () => {
     }
   }
 
-  function addChannel(channel: IChannel) {
+  /**
+   * users hashmap, keyed by user ID
+   */
+  const users = reactive<Map<number, Interface.IUsersInner>>(
+    new Map(localStorage.getItem('users') ? JSON.parse(localStorage.getItem('users')!) : new Map()),
+  )
+
+  function setUsers(new_users: Array<Interface.IUsersInner>) {
+    users.clear()
+    for (const user of new_users) {
+      users.set(user.id, user)
+    }
+  }
+
+  function addChannel(channel: Interface.IChannel) {
     channels.push(channel)
     messages.set(channel.id, [])
   }
@@ -105,7 +130,7 @@ export const useMainStore = defineStore('main_store', () => {
   async function signup(data: Interface.ISignup) {
     try {
       const response = await request.post('/signup', data)
-      saveUser(response)
+      await loadState(response)
     } catch (err) {
       console.error('signup error: ---> ', err)
       throw err
@@ -115,7 +140,7 @@ export const useMainStore = defineStore('main_store', () => {
   async function signin(data: Interface.ISignin) {
     try {
       const response = await request.post('/signin', data)
-      saveUser(response)
+      await loadState(response)
     } catch (err) {
       console.error('signin error: ---> ', err)
       throw err
@@ -127,6 +152,8 @@ export const useMainStore = defineStore('main_store', () => {
     user,
     setUser,
     hasUser,
+    users,
+    setUsers,
     // token ...
     token,
     setToken,
@@ -138,10 +165,13 @@ export const useMainStore = defineStore('main_store', () => {
     // channels ...
     channels,
     setChannels,
+    get_channels,
+    get_single_channels,
     // messages ...
     messages,
-    // other ...
     setMessages,
+    getChannelMessages,
+    // other ...
     addChannel,
     addMessage,
     signin,
@@ -151,31 +181,57 @@ export const useMainStore = defineStore('main_store', () => {
 
 export default useMainStore
 
-function saveUser(response: AxiosResponse) {
-  const mainStore = useMainStore()
-  const token = response.data.token
-  const user = jwtDecode(token) as {
-    ws_id: number
-    ws_name: string
-    id: number
-    fullname: string
-    created: string
-    email: string
-  } // Decode the JWT to get user info
-  console.log('saveUser: ---> ', user)
-  const workspace = { id: user.ws_id, name: user.ws_name }
-  const new_user = {
-    id: user.id,
-    fullname: user.fullname,
-    email: user.email,
-    create: user.created,
+async function loadState(response: AxiosResponse) {
+  try {
+    const mainStore = useMainStore()
+    const token = response.data.token
+    const user = jwtDecode(token) as {
+      ws_id: number
+      ws_name: string
+      id: number
+      fullname: string
+      created: string
+      email: string
+    } // Decode the JWT to get user info
+
+    const users_response = await request.get('/users', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const users = users_response.data as Array<Interface.IUsersInner>
+
+    const channels_response = await request.get('/chats', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const channels = channels_response.data as Array<Interface.IChannel>
+
+    const workspace = { id: user.ws_id, name: user.ws_name }
+
+    const new_user = {
+      id: user.id,
+      fullname: user.fullname,
+      email: user.email,
+      create: user.created,
+    }
+
+    mainStore.setWorkspace(workspace)
+    mainStore.setUser(new_user)
+    mainStore.setToken(token)
+    mainStore.setUsers(users)
+    mainStore.setChannels(channels)
+
+    localStorage.setItem('user', JSON.stringify(new_user))
+    localStorage.setItem('workspace', JSON.stringify(workspace))
+    localStorage.setItem('token', token)
+    localStorage.setItem('users', JSON.stringify(users))
+    localStorage.setItem('channels', JSON.stringify(channels))
+  } catch (err) {
+    console.error('loadState error: ---> ', err)
+    throw err
   }
-
-  mainStore.setWorkspace(workspace)
-  mainStore.setUser(new_user)
-  mainStore.setToken(token)
-
-  localStorage.setItem('user', JSON.stringify(new_user))
-  localStorage.setItem('workspace', JSON.stringify(workspace))
-  localStorage.setItem('token', token)
 }

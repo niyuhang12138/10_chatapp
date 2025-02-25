@@ -8,15 +8,16 @@
     <div class="channels">
       <h2>Channels</h2>
       <ul>
-        <li v-for="channel in channels" :key="channel.id"># {{ channel.name }}</li>
+        <li v-for="channel in get_channels" :key="channel.id"># {{ channel.name }}</li>
       </ul>
     </div>
 
     <div class="direct-messages">
       <h2>Direct Messages</h2>
       <ul>
-        <li v-for="user in users" :key="user.id">
-          <img :src="user.avatar" class="avatar" alt="Avatar" /> {{ user.name }}
+        <li v-for="user in filter_users" :key="user.id">
+          <!-- <img :src="user." class="avatar" alt="Avatar" /> -->
+          {{ user.fullname }}
         </li>
       </ul>
     </div>
@@ -26,21 +27,25 @@
 <script lang="ts" setup>
 import useMainStore from '@/stores'
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 
 // init ...
 const main_store = useMainStore()
 
-const { user, workspace } = storeToRefs(main_store)
+const { user, workspace, get_channels, get_single_channels, users } = storeToRefs(main_store)
 
-const channels = [
-  { id: 1, name: 'general' },
-  { id: 2, name: 'random' },
-]
-
-const users = [
-  { id: 1, name: 'Alice', avatar: 'https://via.placeholder.com/24' },
-  { id: 2, name: 'Bob', avatar: 'https://via.placeholder.com/24' },
-]
+const filter_users = computed<Array<Interface.IUserSingleChannel>>(() => {
+  const filter_users: Array<Interface.IUserSingleChannel> = []
+  get_single_channels.value.forEach((channel) => {
+    const id = channel.members.filter((member) => member !== user.value.id)[0]
+    const new_user = users.value.get(id)!
+    filter_users.push({
+      channel_id: channel.id,
+      ...new_user,
+    })
+  })
+  return filter_users
+})
 </script>
 
 <style scoped>

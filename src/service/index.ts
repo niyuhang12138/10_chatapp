@@ -9,4 +9,14 @@ const request = axios.create({
   },
 })
 
+request.interceptors.request.use((config) => {
+  if (localStorage.getItem('token')) {
+    config.headers.Authorization = `Bearer ${localStorage.getItem('token')}`
+  }
+
+  console.log('config: ---> ', config)
+
+  return config
+})
+
 export default request

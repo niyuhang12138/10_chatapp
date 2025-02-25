@@ -22,4 +22,30 @@ declare namespace Interface {
     id: number
     name: string
   }
+
+  interface IUsersInner {
+    id: number
+    fullname: string
+    email: string
+  }
+
+  interface IChannel {
+    id: number
+    ws_id: number
+    name: string
+    type: ChannelType
+    members: Array<number>
+    created_at: string
+  }
+
+  enum ChannelType {
+    Single,
+    Group,
+    PrivateChannel,
+    PublicChannel,
+  }
+
+  interface IUserSingleChannel extends IUsersInner {
+    channel_id: number
+  }
 }
