@@ -23,7 +23,7 @@ declare namespace Interface {
     name: string
   }
 
-  interface IUsersInner {
+  interface IUserInner {
     id: number
     fullname: string
     email: string
@@ -33,19 +33,29 @@ declare namespace Interface {
     id: number
     ws_id: number
     name: string
-    type: ChannelType
+    type: 'Single' | 'Group' | 'PrivateChannel' | 'PublicChannel'
     members: Array<number>
     created_at: string
   }
 
   enum ChannelType {
-    Single,
-    Group,
-    PrivateChannel,
-    PublicChannel,
+    Single = 'Single',
+    Group = 'Group',
+    PrivateChannel = 'PrivateChannel',
+    PublicChannel = 'PublicChannel',
   }
 
-  interface IUserSingleChannel extends IUsersInner {
+  interface IUserSingleChannel extends IUserInner {
     channel_id: number
+  }
+
+  interface IMessage {
+    id: number
+    chat_id: number
+    sender_id: number
+    content: string
+    files: Array<string>
+    created_at: string
+    sender: IUserInner
   }
 }

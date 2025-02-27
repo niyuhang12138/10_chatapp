@@ -1,35 +1,46 @@
 <template>
   <div class="message-list">
-    <div v-for="message in messages" :key="message.id" class="message">
-      <img :src="message.avatar" class="avatar" alt="Avatar" />
-      <div class="message-content">
-        <div class="message-header">
-          <span class="message-user">{{ message.user }}</span>
-          <span class="message-time">{{ formatTime(message.time) }}</span>
-        </div>
-        <div class="message-text">{{ message.text }}</div>
-      </div>
+    <div v-if="getMessageForActiveChannel.length === 0" class="no-messages">
+      No messages in this channel yet.
     </div>
+    <template v-else>
+      <div v-for="message in getMessageForActiveChannel" :key="message.id" class="message">
+        <img
+          :src="`https://ui-avatars.com/api/?name=${message.sender.fullname.replace(' ', '+')}`"
+          class="avatar"
+          alt="Avatar"
+        />
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-user">{{ message.sender.fullname }}</span>
+            <span class="message-time">{{ formatTime(message.created_at) }}</span>
+          </div>
+          <div class="message-text">{{ message.content }}</div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-const messages = [
-  {
-    id: 1,
-    user: 'Alice',
-    avatar: 'https://via.placeholder.com/40',
-    text: 'Hello there!',
-    time: '2024-08-17T09:00:00Z',
+import { onMounted, watch, watchEffect } from 'vue'
+import useMainStore from '@/stores'
+import { storeToRefs } from 'pinia'
+
+// init ...
+const main_store = useMainStore()
+
+const { getMessageForActiveChannel, active_channel } = storeToRefs(main_store)
+
+watch(
+  () => active_channel.value,
+  async () => {
+    if (active_channel.value) {
+      await main_store.fetchMessagesForChannel(active_channel.value?.id)
+    }
   },
-  {
-    id: 2,
-    user: 'Bob',
-    avatar: 'https://via.placeholder.com/40',
-    text: 'Hi Alice! How are you?',
-    time: '2024-08-17T09:05:00Z',
-  },
-]
+)
+
 const formatTime = (time: string) => {
   const date = new Date(time)
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -84,5 +95,11 @@ const formatTime = (time: string) => {
   line-height: 1.4;
   word-wrap: break-word;
   white-space: pre-wrap;
+}
+
+.no-messages {
+  text-align: center;
+  color: #b9bbbe;
+  margin-top: 20px;
 }
 </style>

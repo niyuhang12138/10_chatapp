@@ -24,10 +24,6 @@ export const useMainStore = defineStore('main_store', () => {
     Object.assign(user, state)
   }
 
-  function hasUser() {
-    return user.id !== 0 && user.fullname && user.email && user.create
-  }
-
   /**
    * Authentication token
    */
@@ -35,10 +31,6 @@ export const useMainStore = defineStore('main_store', () => {
 
   function setToken(new_token: string) {
     token.value = new_token
-  }
-
-  function hasToken() {
-    return !!token.value
   }
 
   /**
@@ -54,78 +46,88 @@ export const useMainStore = defineStore('main_store', () => {
     Object.assign(workspace, new_workspace)
   }
 
-  function hasWorkspace() {
-    return workspace.id !== 0 && workspace.name
-  }
-
   /**
    * List of channels
    */
 
-  const channels = reactive<Array<Interface.IChannel>>(
+  const channels = ref<Array<Interface.IChannel>>(
     localStorage.getItem('channels') ? JSON.parse(localStorage.getItem('channels')!) : [],
   )
 
   function setChannels(new_channels: Array<Interface.IChannel>) {
-    channels.splice(0, channels.length, ...new_channels)
+    channels.value = new_channels
   }
 
-  const get_channels = computed(() =>
-    channels.filter((channel) => channel.type !== Interface.ChannelType.Single),
-  )
+  const get_channels = computed(() => channels.value.filter((channel) => channel.type !== 'Single'))
 
   const get_single_channels = computed(() => {
-    return channels.filter((channel) => channel.type === Interface.ChannelType.Single)
+    return channels.value.filter((channel) => channel.type === 'Single')
   })
 
   /**
    * Messages hashmap, keyed by channel ID
    */
-  type TMessages = Map<number, Array<string>>
 
-  const messages = reactive<TMessages>(
-    new Map(
-      localStorage.getItem('messages') ? JSON.parse(localStorage.getItem('messages')!) : new Map(),
-    ),
-  )
+  const messages = ref<{
+    [key: number]: Array<Interface.IMessage>
+  }>({})
 
-  function setMessages(new_messages: TMessages) {
-    messages.clear()
-    for (const [key, value] of new_messages) {
-      messages.set(key, value)
-    }
+  function setMessages(channel_id: number, new_messages: Array<Interface.IMessage>) {
+    messages.value[channel_id] = new_messages
   }
 
   /**
    * users hashmap, keyed by user ID
    */
-  const users = reactive<Map<number, Interface.IUsersInner>>(
-    new Map(localStorage.getItem('users') ? JSON.parse(localStorage.getItem('users')!) : new Map()),
-  )
+  const users = ref<{
+    [key: number]: Interface.IUserInner
+  }>(localStorage.getItem('users') ? JSON.parse(localStorage.getItem('users')!) : {})
 
-  function setUsers(new_users: Array<Interface.IUsersInner>) {
-    users.clear()
-    for (const user of new_users) {
-      users.set(user.id, user)
+  function setUsers(new_users: { [key: number]: Interface.IUserInner }) {
+    users.value = new_users
+  }
+
+  /**
+   * active channel
+   */
+  const active_channel = ref<null | Interface.IChannel>(null)
+
+  function setActiveChannel(channel_id: number) {
+    // active_channel.value = channel_id
+    const channel = channels.value.find((channel) => channel.id === channel_id)
+    if (channel) {
+      active_channel.value = channel
     }
   }
 
   function addChannel(channel: Interface.IChannel) {
-    channels.push(channel)
-    messages.set(channel.id, [])
+    channels.value.push(channel)
+    messages.value[channel.id] = []
   }
 
-  function addMessage(channel_id: number, message: string) {
-    if (messages.has(channel_id)) {
-      messages.get(channel_id)!.push(message)
+  function addMessage(channel_id: number, message: Interface.IMessage) {
+    if (messages.value[channel_id]) {
+      messages.value[channel_id].push(message)
     } else {
-      messages.set(channel_id, [message])
+      messages.value[channel_id] = [message]
     }
   }
 
-  function getChannelMessages(channel_id: number): Array<string> {
-    return messages.get(channel_id) || []
+  function getChannelMessages(channel_id: number): Array<Interface.IMessage> {
+    return messages.value[channel_id] || []
   }
+
+  const getMessageForActiveChannel = computed(() => {
+    const find_messages = active_channel.value ? messages.value[active_channel.value.id] || [] : []
+
+    console.log(find_messages)
+
+    return find_messages
+  })
+
+  // function getMessageForActiveChannel(): Array<Interface.IMessage> {
+  //   return
+  // }
 
   async function signup(data: Interface.ISignup) {
     try {
@@ -147,21 +149,53 @@ export const useMainStore = defineStore('main_store', () => {
     }
   }
 
+  async function fetchMessagesForChannel(channel_id: number) {
+    if (!messages.value[channel_id] || messages.value[channel_id].length === 0) {
+      try {
+        const response = await request.get(`/chats/${channel_id}/message`)
+        let messages = response.data as Array<Interface.IMessage>
+        messages.forEach((message) => {
+          message.sender = users.value[message.sender_id] || {
+            id: 0,
+            fullname: 'None',
+            email: 'None@chatapp.com',
+          }
+        })
+        setMessages(channel_id, messages)
+      } catch (err) {
+        console.error('fetchMessagesForChannel error: ---> ', err)
+        throw err
+      }
+    }
+  }
+
+  function reset() {
+    localStorage.clear()
+    Object.assign(user, {
+      id: 0,
+      fullname: '',
+      email: '',
+      create: '',
+    })
+    token.value = ''
+    Object.assign(workspace, { id: 0, name: '' })
+    channels.value = []
+    messages.value = {}
+    users.value = {}
+  }
+
   return {
     // user ...
     user,
     setUser,
-    hasUser,
     users,
     setUsers,
     // token ...
     token,
     setToken,
-    hasToken,
     // workspace ...
     workspace,
     setWorkspace,
-    hasWorkspace,
     // channels ...
     channels,
     setChannels,
@@ -171,11 +205,17 @@ export const useMainStore = defineStore('main_store', () => {
     messages,
     setMessages,
     getChannelMessages,
+    // active channel
+    active_channel,
+    setActiveChannel,
+    getMessageForActiveChannel,
     // other ...
     addChannel,
     addMessage,
     signin,
     signup,
+    reset,
+    fetchMessagesForChannel,
   }
 })
 
@@ -200,7 +240,13 @@ async function loadState(response: AxiosResponse) {
       },
     })
 
-    const users = users_response.data as Array<Interface.IUsersInner>
+    const users_data = users_response.data as Array<Interface.IUserInner>
+    const users: {
+      [key: number]: Interface.IUserInner
+    } = {}
+    users_data.forEach((user) => {
+      users[user.id] = user
+    })
 
     const channels_response = await request.get('/chats', {
       headers: {
