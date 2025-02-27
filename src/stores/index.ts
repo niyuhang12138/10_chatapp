@@ -169,6 +169,20 @@ export const useMainStore = defineStore('main_store', () => {
     }
   }
 
+  async function sendMessage(message: Interface.ISendMessage) {
+    if (!active_channel.value) return
+    const channel_id = active_channel.value!.id
+    try {
+      const response = await request.post(`/chats/${channel_id}/message`, message)
+      const new_message = response.data as Interface.IMessage
+      new_message.sender = user
+      addMessage(channel_id, new_message)
+    } catch (err) {
+      console.error('sendMessage error: ---> ', err)
+      throw err
+    }
+  }
+
   function reset() {
     localStorage.clear()
     Object.assign(user, {
@@ -216,6 +230,7 @@ export const useMainStore = defineStore('main_store', () => {
     signup,
     reset,
     fetchMessagesForChannel,
+    sendMessage,
   }
 })
 

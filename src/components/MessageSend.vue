@@ -28,12 +28,18 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import useMainStore from '@/stores'
+
+// init ...
+const main_store = useMainStore()
+
 const message = ref('')
-const sendMessage = () => {
+async function sendMessage() {
   if (message.value.trim()) {
-    // Dispatch the message to Vuex store or perform the send operation
-    // /* this */.$store.dispatch('sendMessage', this.message)
-    // this.message = ''
+    await main_store.sendMessage({
+      content: message.value,
+    })
+
     message.value = ''
   }
 }

@@ -58,4 +58,9 @@ declare namespace Interface {
     created_at: string
     sender: IUserInner
   }
+
+  interface ISendMessage {
+    content: string
+    files?: Array<string>
+  }
 }
