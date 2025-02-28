@@ -63,4 +63,13 @@ declare namespace Interface {
     content: string
     files?: Array<string>
   }
+
+  interface IConfig {
+    server: IServerConfig
+  }
+
+  interface IServerConfig {
+    chat: string
+    notification: string
+  }
 }

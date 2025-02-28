@@ -14,8 +14,6 @@ request.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${localStorage.getItem('token')}`
   }
 
-  console.log('config: ---> ', config)
-
   return config
 })
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="message-list">
+  <div class="message-list" id="message-list" :ref="message_list">
     <div v-if="getMessageForActiveChannel.length === 0" class="no-messages">
       No messages in this channel yet.
     </div>
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, watchEffect } from 'vue'
+import { onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import useMainStore from '@/stores'
 import { storeToRefs } from 'pinia'
 
@@ -45,6 +45,29 @@ const formatTime = (time: string) => {
   const date = new Date(time)
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
+
+const message_list = ref('')
+
+let observer: MutationObserver | null = null
+
+onMounted(() => {
+  const message_list = document.getElementById('message-list')
+  if (!message_list) return
+  const config: MutationObserverInit = {
+    childList: true,
+  }
+
+  const callback = function (mutationsList: MutationRecord[], observer: MutationObserver) {
+    message_list.scrollTop = message_list.scrollHeight
+  }
+
+  observer = new MutationObserver(callback)
+  observer.observe(message_list, config)
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
+})
 </script>
 
 <style scoped>

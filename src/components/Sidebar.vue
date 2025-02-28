@@ -65,7 +65,6 @@ const filter_users = computed<Array<Interface.IUserSingleChannel>>(() => {
   const filter_users: Array<Interface.IUserSingleChannel> = []
   get_single_channels.value.forEach((channel) => {
     const id = channel.members.filter((member) => member !== user.value.id)[0]
-    console.log(id, users.value)
     const new_user = users.value[id]
     filter_users.push({
       channel_id: channel.id,

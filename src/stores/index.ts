@@ -106,6 +106,7 @@ export const useMainStore = defineStore('main_store', () => {
   }
 
   function addMessage(channel_id: number, message: Interface.IMessage) {
+    console.log('addMessage: ---> ', message)
     if (messages.value[channel_id]) {
       messages.value[channel_id].push(message)
     } else {
@@ -119,8 +120,6 @@ export const useMainStore = defineStore('main_store', () => {
 
   const getMessageForActiveChannel = computed(() => {
     const find_messages = active_channel.value ? messages.value[active_channel.value.id] || [] : []
-
-    console.log(find_messages)
 
     return find_messages
   })
@@ -155,6 +154,7 @@ export const useMainStore = defineStore('main_store', () => {
         const response = await request.get(`/chats/${channel_id}/message`)
         let messages = response.data as Array<Interface.IMessage>
         messages.forEach((message) => {
+          console.log(message)
           message.sender = users.value[message.sender_id] || {
             id: 0,
             fullname: 'None',
@@ -173,10 +173,11 @@ export const useMainStore = defineStore('main_store', () => {
     if (!active_channel.value) return
     const channel_id = active_channel.value!.id
     try {
-      const response = await request.post(`/chats/${channel_id}/message`, message)
-      const new_message = response.data as Interface.IMessage
-      new_message.sender = user
-      addMessage(channel_id, new_message)
+      await request.post(`/chats/${channel_id}/message`, message)
+      // const response = await request.post(`/chats/${channel_id}/message`, message)
+      // const new_message = response.data as Interface.IMessage
+      // new_message.sender = user
+      // addMessage(channel_id, new_message)
     } catch (err) {
       console.error('sendMessage error: ---> ', err)
       throw err
@@ -196,6 +197,7 @@ export const useMainStore = defineStore('main_store', () => {
     channels.value = []
     messages.value = {}
     users.value = {}
+    active_channel.value = null
   }
 
   return {
